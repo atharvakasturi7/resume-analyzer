@@ -1,4 +1,5 @@
 const { extractTextFromPdf } = require('../services/pdfServices');
+const { analyzeResume } = require('../services/aiService');
 
 const getHealth = (req, res) => {
     res.send("I am fine");
@@ -34,12 +35,19 @@ const uploadResume = async (req, res) => {
         const extractedText = await extractTextFromPdf(req.file.path);
 
         console.log("--- PDF Successfully Parsed ---");
-        console.log(extractedText.substring(0, 1000));
+
+        const analysis = await analyzeResume(extractedText);
+
+        const cleanedAnalysis = analysis
+            .replace(/```json/g, "")
+            .replace(/```/g, "")
+            .trim();
+
+        const parsedAnalysis = JSON.parse(cleanedAnalysis);
 
         return res.status(200).json({
-            message: "File uploaded and parsed successfully!",
-            textLength: extractedText.length,
-            preview: extractedText.substring(0, 1000)
+            message: "Resume analyzed successfully",
+            analysis: parsedAnalysis
         });
     } catch (error) {
         console.log("--- PDF Parsing Failed ---");
