@@ -45,14 +45,42 @@ const uploadResume = async (req, res) => {
 
         const parsedAnalysis = JSON.parse(cleanedAnalysis);
 
-        return res.status(200).json({
-            message: "Resume analyzed successfully",
-            analysis: parsedAnalysis
-        });
+        console.log("Parsed Analysis:");
+        console.log(parsedAnalysis);
+
+         console.log("atsScore:", typeof parsedAnalysis.atsScore);
+            console.log("layoutAnalyzed:", typeof parsedAnalysis.layoutAnalyzed);
+            console.log("summary:", typeof parsedAnalysis.summary);
+            console.log("strengths:", Array.isArray(parsedAnalysis.strengths));
+            console.log("weaknesses:", Array.isArray(parsedAnalysis.weaknesses));
+            console.log("suggestions:", Array.isArray(parsedAnalysis.suggestions));
+
+        // Validate AI response
+        if (
+            typeof parsedAnalysis.atsScore !== "number" ||
+            typeof parsedAnalysis.layoutAnalyzed !== "boolean" ||
+            typeof parsedAnalysis.summary !== "string" ||
+            !Array.isArray(parsedAnalysis.strengths) ||
+            !Array.isArray(parsedAnalysis.weaknesses) ||
+            !Array.isArray(parsedAnalysis.suggestions)
+           
+        ) {
+    throw new Error("Invalid AI response format");
+}
+
+return res.status(200).json({
+    message: "Resume analyzed successfully",
+    analysis: parsedAnalysis
+});
     } catch (error) {
-        console.log("--- PDF Parsing Failed ---");
-        return res.status(500).send(error.message);
-    }
+    console.log("--- Resume Analysis Failed ---");
+    console.error(error);
+
+    return res.status(500).json({
+        message: "Resume analysis failed",
+        error: error.message
+    });
+}
 };
 
 module.exports = {
