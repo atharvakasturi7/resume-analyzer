@@ -52,20 +52,134 @@ IMPORTANT RULES
 
 
 
-
 TECHNOLOGY ALIAS RULES
 
-Treat these as equivalent:
+Treat the following terms as equivalent when matching resume skills with job description requirements.
 
-* React = React.js
-* Node = Node.js
-* Mongo = MongoDB
+Programming Languages
+
 * JS = JavaScript
 * TS = TypeScript
+
+Frontend
+
+* React = React.js
+* ReactJS = React.js
+* React JS = React.js
+* Vue = Vue.js
+* VueJS = Vue.js
+* Vue JS = Vue.js
+
+Backend
+
+* Node = Node.js
 * Express = Express.js
+
+Databases
+
+* Mongo = MongoDB
+* Mongo Atlas = MongoDB Atlas
+* MongoDB Atlas = MongoDB
 * PostgreSQL = Postgres
-* AWS EC2 = EC2
+* PostgreSQL = PostgreSQL
+* MySQL = My SQL
+
+APIs
+
 * REST API = REST APIs
+* RESTful API = REST APIs
+* RESTful APIs = REST APIs
+
+Authentication & Security
+
+* JWT = JWT Authentication
+* JSON Web Token = JWT Authentication
+* OAuth = OAuth Authentication
+
+Version Control
+
+* GitHub = Github
+* Git = Git Version Control
+
+Cloud & Deployment
+
+* AWS S3 = AWS
+* AWS EC2 = AWS
+* AWS Lambda = AWS
+* Amazon Web Services = AWS
+* DigitalOcean = Cloud Deployment
+* Heroku = Cloud Deployment
+* Vercel = Cloud Deployment
+* Netlify = Cloud Deployment
+* Render = Cloud Deployment
+
+CI/CD
+
+* Continuous Integration = CI/CD
+* Continuous Deployment = CI/CD
+* Continuous Integration / Continuous Deployment = CI/CD
+* CI Pipeline = CI/CD
+* CD Pipeline = CI/CD
+
+Testing
+
+* Jest = Unit Testing
+* Jest/Enzyme = Unit Testing
+* Enzyme = Unit Testing
+* Integration Testing = Integration Testing
+
+CSS
+
+* Tailwind = Tailwind CSS
+* Bootstrap = Bootstrap CSS
+
+Containers
+
+* Docker Compose = Docker
+
+Communication & Collaboration
+
+* Slack = Team Collaboration
+* Trello = Project Management
+* Jira = Project Management
+
+IMPORTANT
+
+Use these mappings ONLY to recognize equivalent technologies.
+
+Do NOT assume broader knowledge than what is explicitly demonstrated.
+
+Examples:
+
+- AWS S3 does NOT imply knowledge of AWS Lambda, ECS, IAM, or CloudFormation.
+- MongoDB Atlas does NOT imply advanced MongoDB administration.
+- Docker Compose does NOT imply Kubernetes.
+- Jest does NOT imply expertise in all testing frameworks.
+
+Only award credit for the specific technology or its accepted alias.
+
+SKILL MATCHING RULES
+
+Before classifying a skill as matched, partial, or missing:
+
+1. Search the ENTIRE resume including:
+   - Skills section
+   - Work experience
+   - Projects
+   - Certifications
+   - Publications
+   - Responsibilities
+   - Technical summaries
+
+2. Apply all Technology Alias Rules before determining whether a skill is missing.
+
+3. If clear evidence exists anywhere in the resume, include the skill in matchedSkills.
+
+4. If only limited, indirect, or related evidence exists, include the skill in partialSkills.
+
+5. Include a skill in missingSkills ONLY if there is no meaningful evidence after checking the entire resume.
+
+6. Never place the same skill in matchedSkills, partialSkills, and missingSkills simultaneously.
 
 SENIORITY RULES
 
@@ -73,6 +187,18 @@ SENIORITY RULES
 * Student or fresher applying for internships may still score highly.
 * Junior applying for Senior role should be penalized heavily.
 * Missing required professional experience should reduce score significantly.
+* If the candidate has significantly MORE relevant professional experience than required, classify seniorityAlignment as "Overqualified" unless major required skills are missing.
+* Do not classify an experienced professional as "Slightly Junior" solely because they exceed the required years of experience.
+
+Experience Evaluation Rules
+
+1. Compare the resume's relevant professional experience with the job's required experience.
+
+2. If the candidate exceeds the required experience by more than 2 years, classify seniorityAlignment as "Overqualified".
+
+3. If the experience closely matches the requirement, classify as "Well Aligned".
+
+4. Only use "Slightly Junior" or "Significantly Junior" when the candidate has LESS experience than required.
 
 SCORING PHILOSOPHY
 
@@ -124,6 +250,27 @@ Return JSON in EXACTLY this format:
 "suggestions": []
 }
 
+SKILL CLASSIFICATION PROCESS
+
+For every important requirement in the job description:
+
+Step 1
+Search the entire resume.
+
+Step 2
+Apply the Technology Alias Rules.
+
+Step 3
+If strong evidence exists → matchedSkills.
+
+Step 4
+Else if limited evidence exists → partialSkills.
+
+Step 5
+Else → missingSkills.
+
+A skill may appear in ONE category only.
+
 FIELD RULES
 
 * matchScore must be an integer from 0 to 100.
@@ -138,6 +285,26 @@ FIELD RULES
 * summary must be 2-3 sentences.
 
 * matchedSkills must contain skills found in BOTH resume and JD.
+
+* matchedSkills must include technologies found through the Technology Alias Rules.
+
+If an equivalent technology is found using a Technology Alias Rule:
+
+- Add it to matchedSkills if the resume clearly demonstrates practical use.
+- Add it to partialSkills only if the resume indicates limited exposure.
+- NEVER include that same skill in missingSkills.
+
+Examples:
+
+AWS S3 → AWS
+
+Continuous Integration / Continuous Deployment → CI/CD
+
+Jest/Enzyme → Unit Testing
+
+JWT → JWT Authentication
+
+MongoDB Atlas → MongoDB
 
 * missingSkills must contain important JD requirements missing from the resume.
 
@@ -313,6 +480,74 @@ ${jobDescription}
 
         parsedResult.matchLevel =
             parsedResult.matchLevel.trim();
+
+        // ----------------------------
+        // Remove duplicate skills across categories
+        // ----------------------------
+
+        const matchedSkills = new Set(
+            parsedResult.matchedSkills.map(skill => skill.toLowerCase())
+        );
+
+        const partialSkills = new Set(
+            parsedResult.partialSkills.map(skill => skill.toLowerCase())
+        );
+
+        parsedResult.missingSkills = parsedResult.missingSkills.filter(
+            skill =>
+                !matchedSkills.has(skill.toLowerCase()) &&
+                !partialSkills.has(skill.toLowerCase())
+        );
+
+        // ----------------------------
+        // Technology Alias Normalization
+        // ----------------------------
+
+        const aliases = {
+            "react": "react.js",
+            "node": "node.js",
+            "express": "express.js",
+            "mongodb atlas": "mongodb",
+            "mongo": "mongodb",
+            "rest api": "rest apis",
+            "jwt": "jwt authentication",
+            "aws s3": "aws",
+            "continuous integration": "ci/cd",
+            "continuous deployment": "ci/cd",
+            "continuous integration / continuous deployment": "ci/cd",
+            "jest": "unit testing",
+            "jest/enzyme": "unit testing"
+        };
+
+        const normalizeSkill = (skill) =>
+            aliases[skill.toLowerCase()] || skill.toLowerCase();
+
+        const normalizedMatchedSkills = new Set(
+            parsedResult.matchedSkills.map(normalizeSkill)
+        );
+
+        const normalizedPartialSkills = new Set(
+            parsedResult.partialSkills.map(normalizeSkill)
+        );
+
+        parsedResult.missingSkills = parsedResult.missingSkills.filter(
+            skill =>
+                !normalizedMatchedSkills.has(normalizeSkill(skill)) &&
+                !normalizedPartialSkills.has(normalizeSkill(skill))
+        );
+
+        // ----------------------------
+        // Seniority Consistency Check
+        // ----------------------------
+
+        const experienceGap = parsedResult.experienceGap.toLowerCase();
+
+        if (
+            experienceGap.includes("exceeds") &&
+            parsedResult.seniorityAlignment === "Slightly Junior"
+        ) {
+            parsedResult.seniorityAlignment = "Overqualified";
+        }
 
         return parsedResult;
 

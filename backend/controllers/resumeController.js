@@ -1,6 +1,7 @@
 const { extractTextFromPdf } = require('../services/pdfServices');
 const { analyzeResume } = require('../services/aiService');
 const { analyzeJobMatch } = require('../services/jobMatchService');
+const { analyzeRoadmap } = require('../services/roadmapService');
 
 const getHealth = (req, res) => {
     res.send("I am fine");
@@ -140,7 +141,70 @@ const matchResumeToJob = async (req, res) => {
     }
 };
 
+const generateCareerRoadmap = async (req, res) => {
+    console.log("--- Career Roadmap Generation Started ---");
 
+    try {
+        if (!req.file) {
+            return res.status(400).json({
+                message: "Resume file is required"
+            });
+        }
+
+        const { jobDescription } = req.body;
+
+        if (!jobDescription || !jobDescription.trim()) {
+            return res.status(400).json({
+                message: "Job description is required"
+            });
+        }
+
+        const resumeText = await extractTextFromPdf(req.file.path);
+
+        console.log("--- Resume Text Extracted ---");
+
+        if (resumeText.trim().length < 200) {
+            return res.status(400).json({
+                message: "Unable to extract sufficient text from resume. Please upload a more ATS-friendly PDF."
+            });
+        }
+
+        const roadmap = await analyzeRoadmap(
+            resumeText,
+            jobDescription
+        );
+
+        console.log("Career Roadmap Generated:");
+        console.log(roadmap);
+
+        if (
+            !Array.isArray(roadmap.highPrioritySkills) ||
+            !Array.isArray(roadmap.mediumPrioritySkills) ||
+            !Array.isArray(roadmap.lowPrioritySkills) ||
+            !Array.isArray(roadmap.recommendedProjects) ||
+            typeof roadmap.estimatedLearningTime !== "string" ||
+            typeof roadmap.potentialMatchScoreAfterLearning !== "number"
+        ) {
+            throw new Error("Invalid roadmap response format");
+        }
+
+        return res.status(200).json({
+            message: "Career roadmap generated successfully",
+            roadmap
+        });
+
+    } catch (error) {
+
+        console.log("--- Career Roadmap Generation Failed ---");
+        console.error(error);
+
+        return res.status(500).json({
+            message: "Career roadmap generation failed",
+            error: error.message
+        });
+
+    }
+};
 
 module.exports = {
     getHealth,
@@ -148,5 +212,6 @@ module.exports = {
     getResume,
     searchApplicant,
     uploadResume,
-    matchResumeToJob
+    matchResumeToJob,
+    generateCareerRoadmap
 };
